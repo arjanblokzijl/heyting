@@ -12,7 +12,7 @@ case class IntLit(i: Int) extends Literal
 case class StringLit(s: String) extends Literal
 case class CharLit(c: Char) extends Literal
 case class DoubleLit(d: Double) extends Literal
-case class IdentLit(id: Ident) extends Literal
+//case class IdentLit(id: Ident) extends Literal
 
 sealed trait Term extends Tree {
   def atomicTerm: Boolean = this match {
@@ -21,6 +21,7 @@ sealed trait Term extends Tree {
     case _ => false
   }
 }
+
 case class Var(n: Ident) extends Term
 case class Lit(l: Literal) extends Term
 case class App(l: Term, r: Term) extends Term

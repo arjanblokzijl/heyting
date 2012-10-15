@@ -35,7 +35,7 @@ object Printing {
     case DoubleLit(d) => double(d)
     case CharLit(c) => char(c)
     case StringLit(s) => text(s)
-    case IdentLit(i) => text(i.name)
+//    case IdentLit(i) => text(i.name)
   }
 
   def pprApp(e: Term): Doc = {
@@ -91,6 +91,7 @@ object Printing {
     case StringT => text("string")
     case BooleanT => text("boolean")
     case FloatT => text("float")
+    case CharT => text("char")
   }
 
   type Precedence = Int

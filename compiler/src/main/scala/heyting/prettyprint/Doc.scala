@@ -119,19 +119,19 @@ object Docs {
   def float(f: Float): Doc = text(f.toString)
   def double(d: Double): Doc = text(d.toString)
 
-  def hcat(ys: IndexedSeq[Doc]): Doc = reduceAB(ys.foldLeft(empty)(beside_1(false, _, _)))
+  def hcat(ys: Seq[Doc]): Doc = reduceAB(ys.foldLeft(empty)(beside_1(false, _, _)))
 
-  def hsep(ys: IndexedSeq[Doc]): Doc = reduceAB(ys.foldLeft(empty)(beside_1(true, _, _)))
+  def hsep(ys: Seq[Doc]): Doc = reduceAB(ys.foldLeft(empty)(beside_1(true, _, _)))
 
-  def vcat(ys: IndexedSeq[Doc]): Doc = reduceAB(ys.foldLeft(empty)(above_1(false, _, _)))
+  def vcat(ys: Seq[Doc]): Doc = reduceAB(ys.foldLeft(empty)(above_1(false, _, _)))
 
-  def sep(ys: IndexedSeq[Doc]): Doc = sepX(true, ys)
+  def sep(ys: Seq[Doc]): Doc = sepX(true, ys)
 
-  def sepX(g: Boolean, ys: IndexedSeq[Doc]): Doc =
+  def sepX(g: Boolean, ys: Seq[Doc]): Doc =
     if (ys.isEmpty) empty
     else sep1(g, ys.head.reduceDoc, 0, ys.tail)
 
-  def sep1[A](g: Boolean, d: RDoc[A], k: Int, ys: IndexedSeq[Doc]): RDoc[A] = d match {
+  def sep1[A](g: Boolean, d: RDoc[A], k: Int, ys: Seq[Doc]): RDoc[A] = d match {
     case NoDoc => NoDoc
     case Union(p, q) => union_(sep1(g, p, k, ys), aboveNest(q, false, k, vcat(ys).reduceDoc))
     case Empty => mkNest(k, sepX(g, ys))
@@ -159,7 +159,7 @@ object Docs {
     case d => d
   }
 
-  def sepNB(g: Boolean, d: Doc, k: Int, ys: IndexedSeq[Doc]): Doc = d match {
+  def sepNB(g: Boolean, d: Doc, k: Int, ys: Seq[Doc]): Doc = d match {
     case Nest(_, p) => sepNB(g, p, k, ys)
     case Empty => {
       val rest = if (g) hsep(ys) else hcat(ys)

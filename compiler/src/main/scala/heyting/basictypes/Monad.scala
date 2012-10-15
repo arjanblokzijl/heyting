@@ -13,6 +13,8 @@ trait Monad[F[_]] {
 
   def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
 
+  def join[A](ffa: F[F[A]]): F[A] = bind(ffa)(a => a)
+
   def >>=[A, B](fa: F[A])(f: A => F[B]): F[B] = flatMap(fa)(f)
 
   def flatMap_[A, B](fa: F[A])(fb: F[B]): F[B] = flatMap(fa)(_ => fb)

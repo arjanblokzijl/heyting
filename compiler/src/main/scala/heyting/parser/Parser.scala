@@ -117,7 +117,7 @@ trait Parser {
           case DOUBLELIT => DoubleLit(tokenVal.toDouble)
           case CHARLIT => CharLit(in.ch)
           case STRINGLIT => StringLit(tokenVal)
-          case IDENTIFIER => IdentLit(raw(tokenVal))
+//          case IDENTIFIER => IdentLit(raw(tokenVal))
         }
       }
 

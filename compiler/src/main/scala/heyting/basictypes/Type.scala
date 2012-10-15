@@ -7,7 +7,7 @@ import Types._
 sealed trait Type {
   def -->(res: Sigma): Tau = Fun(this, res)
 }
-case class ForAll(tyVars: IndexedSeq[TyVar], rho: Rho) extends Type
+case class ForAll(tyVars: Seq[TyVar], rho: Rho) extends Type
 case class Fun(arg: Type, res: Type) extends Type
 sealed trait TyCon extends Type
 
@@ -24,9 +24,22 @@ object Types {
   /**a type variable bound by a ForAll*/
   case class BoundTv(s: String) extends TyVar
   /**A skolem constraint. The string is just to improve the error message.*/
-  case class SkolemTv(s: String, u: Uniq) extends TyVar
+  case class SkolemTv(s: String, u: Uniq) extends TyVar {
+    override def equals(other: Any) = other match {
+      case SkolemTv(_, u2) => u == u2
+      case _ => false
+    }
+    override def hashCode() = u.hashCode
+  }
 
-  case class MetaTv(u: Unique, tr: TyRef) extends Type
+  case class MetaTv(u: Unique, tr: TyRef) extends Type {
+    override def equals(other: Any) = other match {
+      case MetaTv(u2, _) => u == u2
+      case _ => false
+    }
+
+    override def hashCode() = u.hashCode
+  }
 
   type Uniq = Unique
   type Rho = Type
@@ -39,6 +52,7 @@ object Types {
   case object DoubleT extends TyCon
   case object BooleanT extends TyCon
   case object StringT extends TyCon
+  case object CharT extends TyCon
   case object FloatT extends TyCon
 
   type Env = Seq[(TyVar, Tau)]
@@ -48,7 +62,7 @@ object Types {
   //Free and bound variables
 
   /**gets the MetaTvs from a tyoe: no duplicates in the result.*/
-  def metaTvs(tys: Seq[Type]): IndexedSeq[MetaTv] = {
+  def metaTvs(tys: Seq[Type]): Seq[MetaTv] = {
     def go(tv: Type, acc: IndexedSeq[MetaTv]): IndexedSeq[MetaTv] = tv match {
       case mt: MetaTv => {
         if (acc.contains(tv)) acc
@@ -63,8 +77,8 @@ object Types {
   }
 
   /**Gets the free type variables from a Type. No duplicates in the result.*/
-  def freeTyVars(tys: IndexedSeq[Type]): IndexedSeq[TyVar] = {
-    def go(bound: IndexedSeq[TyVar], tpe: Type, acc: IndexedSeq[TyVar]): IndexedSeq[TyVar] = tpe match {
+  def freeTyVars(tys: Seq[Type]): Seq[TyVar] = {
+    def go(bound: Seq[TyVar], tpe: Type, acc: IndexedSeq[TyVar]): IndexedSeq[TyVar] = tpe match {
       case tv: TyVar => {
         if (bound.contains(tv)) acc
         else if (acc.contains(tv)) acc
@@ -82,8 +96,8 @@ object Types {
    * Get all the binders used in ForAlls in the type, so that
    * when quantifying an outer for-all we can avoid these inner ones
    */
-  def tyVarBndrs(ty: Rho): IndexedSeq[TyVar] = {
-    def bndrs(tpe: Type): IndexedSeq[TyVar] = tpe match {
+  def tyVarBndrs(ty: Rho): Seq[TyVar] = {
+    def bndrs(tpe: Type): Seq[TyVar] = tpe match {
       case ForAll(tvs, body) => tvs ++ bndrs(body)
       case Fun(arg, res) => bndrs(arg) ++ bndrs(res)
       case _ => IndexedSeq()
