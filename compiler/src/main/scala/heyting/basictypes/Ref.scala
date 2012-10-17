@@ -8,7 +8,7 @@ sealed trait Ref[A] {self =>
 
   def read: A = value()
 
-  def write(a: => A): Unit = {value = () => a; ()}
+  def write(a: => A): A = {value = () => a; a}
 
   override def toString = "Ref <" + read + ">"
 }

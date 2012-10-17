@@ -74,9 +74,9 @@ trait TcFunctions {
 
   def readTcRef[A](a: Ref[A]): Tc[A] = tc(env => Right(a.read))
 
-  def writeTcRef[A](a: Ref[A], v: A): Tc[Unit] = {
+  def writeTcRef[A](a: Ref[A], v: A): Tc[A] = {
     val a1 = a.write(v) //need to evaluate this first
-    tc(env => Right(a1))
+    tc[A](env => Right[ErrMsg, A](a1))
   }
 
   def newTyVarTy: Tc[Tau] = for {
@@ -94,7 +94,7 @@ trait TcFunctions {
 
   def readTv(tv: MetaTv): Tc[Option[Tau]] = readTcRef(tv.tr)
 
-  def writeTv(tv: MetaTv, ty: Tau): Tc[Unit] = writeTcRef(tv.tr, Some(ty))
+  def writeTv(tv: MetaTv, ty: Tau): Tc[Tau] = writeTcRef(tv.tr, Some(ty)).map(_.get)
 
   def getEnv: Tc[Map[Ident, Sigma]] = tc(env => Right(env.var_env))
 
@@ -125,9 +125,9 @@ trait TcFunctions {
   def quantify(tvs: Seq[MetaTv], ty: Rho): Tc[Sigma] = {
     val used_bndrs = tyVarBndrs(ty)
     val new_bndrs: Seq[TyVar] = allBinders.diff(used_bndrs).take(tvs.length)
-    def bind(tv: MetaTv, name: String): Tc[Unit] = writeTv(tv, BoundTv(name))
+    def bind(tv: MetaTv, name: String): Tc[Sigma] = writeTv(tv, BoundTv(name))
     for {
-      _ <- tcMonad.mapM_[(MetaTv, TyVar), Unit](tvs.zip(new_bndrs)){case (tv, ty1) => bind(tv, ty1.name)}
+      _ <- tcMonad.mapM_[(MetaTv, TyVar), Sigma](tvs.zip(new_bndrs)){case (tv, ty1) => bind(tv, ty1.name)}
       ty2 <- zonkType(ty)
     } yield ForAll(new_bndrs, ty2)
   }
@@ -201,35 +201,35 @@ trait TcFunctions {
   //------------------------------------------
   //--      Unification                     --
   //------------------------------------------
-  def unify(ty1: Tau, ty2: Tau): Tc[Unit] = {
+  def unify(ty1: Tau, ty2: Tau): Tc[Tau] = {
     if (badType(ty1) || badType(ty2)) failTc(text("panic: Unexpected types in unification") <+> vcat(Vector(typeOutput.ppr(ty1), typeOutput.ppr(ty2))))
     else (ty1, ty2) match {
-      case (tv1: TyVar, tv2: TyVar) if (tv1 == tv2) =>  point(())
-      case (tv1: MetaTv, tv2: MetaTv) if (tv1 == tv2) =>  point(())
+      case (tv1: TyVar, tv2: TyVar) if (tv1 == tv2) =>  point(tv1)
+      case (tv1: MetaTv, tv2: MetaTv) if (tv1 == tv2) =>  point(tv1)
       case (tv: MetaTv, ty) => unifyVar(tv, ty)
       case (ty, tv: MetaTv) => unifyVar(tv, ty)
       case (Fun(arg1, res1), Fun(arg2, res2)) => unify(arg1, arg2).flatMap(_ => unify(res1, res2))
-      case (tc1: TyCon, tc2: TyCon) if (tc1 == tc2) =>  point(())
+      case (tc1: TyCon, tc2: TyCon) if (tc1 == tc2) =>  point(tc1)
       case (ty1, ty2) => failTc(text("Cannot unify types:") <+> vcat(Vector(typeOutput.ppr(ty1), typeOutput.ppr(ty2))))
     }
   }
 
-  def unifyVar(tv1: MetaTv, ty2: Tau): Tc[Unit] =
-    readTv(tv1).map(mb_ty1 => mb_ty1 match {
+  def unifyVar(tv1: MetaTv, ty2: Tau): Tc[Tau] =
+    readTv(tv1).flatMap(mb_ty1 => mb_ty1 match {
       case Some(ty1) => unify(ty1, ty2)
       case None => unifyUnboundVar(tv1, ty2)
     })
 
 
-  def unifyUnboundVar(tv1: MetaTv, ty1: Tau): Tc[Unit] = ty1 match {
+  def unifyUnboundVar(tv1: MetaTv, ty1: Tau): Tc[Tau] = ty1 match {
     case ty: MetaTv =>
-      readTv(ty).map(mb_ty2 => mb_ty2 match {
+      readTv(ty).flatMap(mb_ty2 => mb_ty2 match {
         case Some(ty1) => unify(tv1, ty1)
         case None => writeTv(tv1, ty)
       })
     case ty2 =>
-      getMetaTyVars(IndexedSeq(ty2)).map(tvs2 =>
-        if (tvs2.contains(tv1)) occursCheckErr(tv1, ty2)
+      getMetaTyVars(IndexedSeq(ty2)).flatMap(tvs2 =>
+        if (tvs2.contains(tv1)) occursCheckErr[Tau](tv1, ty2)
         else writeTv(tv1, ty2))
   }
 
@@ -248,8 +248,8 @@ trait TcFunctions {
     case _ => false
   }
 
-  def occursCheckErr(tv: MetaTv, ty: Tau): Tc[Unit] =
-    failTc(text("Occurs check for") <+> quotes(typeOutput.ppr(tv)) <+> text("in") <+> typeOutput.ppr(ty))
+  def occursCheckErr[A](tv: MetaTv, ty: Tau): Tc[A] =
+    failTc[A](text("Occurs check for") <+> quotes(typeOutput.ppr(tv)) <+> text("in") <+> typeOutput.ppr(ty))
 }
 
 trait TcInstances {

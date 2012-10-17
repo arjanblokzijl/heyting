@@ -16,12 +16,12 @@ object Printing {
   implicit val termOutput: Output[Term] = new Output[Term] {
     def ppr(t: Term) = t match {
       case Var(n) => pprName(n)
-      case Lit(l) => pprLit(l)
-      case App(l, r) => pprApp(App(l, r))
-      case Lam(v, e) => sep(IndexedSeq(char('\\') <> pprName(v) <> text("."), termOutput.ppr(e)))
-      case ALam(v, t, e) => sep(IndexedSeq(char('\\') <> parens(pprName(v) <> dcolon <> typeOutput.ppr(t))))
+      case Lit(l,ty) => pprLit(l)
+      case App(l, r, id) => pprApp(App(l, r, id))
+      case Lam(v, e, ty) => sep(IndexedSeq(char('\\') <> pprName(v) <> text("."), termOutput.ppr(e)))
+      case ALam(v, t, e,_) => sep(IndexedSeq(char('\\') <> parens(pprName(v) <> dcolon <> typeOutput.ppr(t))))
       case Let(v, e) => sep(IndexedSeq(text("let {"), nest(2, pprName(v) <+> char(eqls) <+> termOutput.ppr(e) <+> char('}'))))
-      case Ann(e, ty) => pprParentTerm(e) <+> dcolon <+> pprParendType(ty)
+      case Ann(e, ty,_) => pprParentTerm(e) <+> dcolon <+> pprParendType(ty)
     }
   }
 
@@ -40,7 +40,7 @@ object Printing {
 
   def pprApp(e: Term): Doc = {
     def go(t: Term, es: IndexedSeq[Term]): Doc = t match {
-        case App(e1, e2) => go(e1, e2 +: es)
+        case App(e1, e2, id) => go(e1, e2 +: es)
         case e1 => pprParentTerm(e1) <+> sep(es.map(pprParentTerm))
     }
     go(e, IndexedSeq())

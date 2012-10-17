@@ -19,11 +19,17 @@ object TcExample extends scala.App {
         (RawName("false"), BooleanT))
 
 
-  val expr = Let(RawName("a"),Lit(IntLit(1)))
+  val expr = Let(RawName("a"),Lit(IntLit(1), RawName("1")))
   val result = Tc.runTc(emptyTypeEnv, TypeCheck.tcExpr(expr))
-  val tpe = result match {
+  val texpr = result match {
     case Left(err) => Printing.docToString(err)
-    case Right(ty) => Printing.docToString(sep(Vector(pprParentTerm(expr), nest(2, dcolon <+> typeOutput.ppr(ty)))))
+    case Right(ex) => {
+      ex.tpe match {
+        case Some(ty)  => Printing.docToString(sep(Vector(pprParentTerm(expr), nest(2, dcolon <+> typeOutput.ppr(ty)))))
+        case None => Printing.docToString(text("typing error: expr ") <+> termOutput.ppr(ex) <+> nest(2, text("could not be typed")))
+      }
+    }
   }
-  println("typeCheck: " + tpe)
+
+  println("typeCheck expressing " + texpr)
 }

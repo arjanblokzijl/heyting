@@ -121,7 +121,7 @@ trait Parser {
         }
       }
 
-      Let(raw(id.value), Lit(rhs))
+      Let(raw(id.value), Lit(rhs, RawName(in.currToken.value)))
     } else {
       syntaxError(in.offset, "expected let binding, but found " + Tokens.token2string(in.token), false)
       EmptyTree
