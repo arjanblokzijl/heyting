@@ -5,12 +5,21 @@ import parser.SourceFile
 import reports.Reporting
 import basictypes.Position
 
-class CompilationUnit(val source: SourceFile, val reporter: Reporting) {
+trait Compilation {
+  def source: SourceFile
+  def report: Reporting
+  def options: Options
+}
+
+class CompilationUnit(val source: SourceFile, val report: Reporting, val options: Options) extends Compilation {
+  def trace(msg: String) =
+    if (options.hasFlag(TRACE)) report.trace(msg)
+
   def error(pos: Position, msg: String, b: Boolean) =
-    reporter.error(pos, msg)
+    report.error(pos, msg)
 
   def incompleteInputError(pos: Position, msg: String) =
-    reporter.incompleteInputError(pos, msg)
+    report.incompleteInputError(pos, msg)
 
 }
 

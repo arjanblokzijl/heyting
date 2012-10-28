@@ -29,7 +29,7 @@ case class Id(name: String, tpe: Type) extends Ident {
 case class UId(name: String, uniq: Unique, tpe: Type) extends Ident
 
 object Ident {
-  def raw(s: String): RawName = RawName(s)
+  implicit def raw(s: String): RawName = RawName(s)
   def uniq(s: String, u : Unique): UniqName = UniqName(s, u)
 
   type Name = String //simple name

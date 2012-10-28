@@ -8,12 +8,13 @@ import ast._
 import prettyprint.Doc
 import prettyprint.Docs._
 import Tc._
+import reports.Reporting
 
 sealed trait Expected[A]
 case class Infer[A](aref: Ref[A]) extends Expected[A]
 case class Check[A](a: A) extends Expected[A]
 
-trait TypeCheckFunctions {
+trait TypeCheck {
 
   private final def litType(l: Literal): Sigma = l match {
     case IntLit(_) => IntT
@@ -35,7 +36,8 @@ trait TypeCheckFunctions {
    * Invariant: if the second argument is (Check rho),
    * then rho is in weak-prenex form
    */
-  def tcRho(t: Term, e: Expected[Rho]): Tc[Term] = {
+  final def tcRho(t: Term, e: Expected[Rho]): Tc[Term] = {
+    println("tcRho: %s %s" format(t, e))
     (t, e) match {
       case (Lit(l, id), exp_ty) => instSigma(t, litType(l), exp_ty)
       case (Var(v), exp_ty) => for {
@@ -48,15 +50,21 @@ trait TypeCheckFunctions {
         _ <- checkSigma(arg, arg_ty)
         sig <- instSigma(t, res_ty, exp_ty)
       } yield sig
-      case (Lam(v, body, id), Check(exp_ty)) => for {
+      case (Lam(id, body), Check(exp_ty)) => for {
         (var_ty, body_ty) <- unifyFun(exp_ty)
-        rho <- (checkRho(body, body_ty)).extendVarEnv(v, var_ty)
+        rho <- (checkRho(body, body_ty)).extendVarEnv(id, var_ty)
       } yield rho
-      case (Lam(v, body, id), Infer(ref)) => for {
-        var_ty <- newTyVarTy
-        body_ty <- inferRho(body).extendVarEnv(v, var_ty)
-        rho <- writeTcRef(ref, var_ty --> body_ty).map(t.typed)
-      } yield rho
+      case (Lam(id, body), Infer(ref)) => {
+        for {
+          var_ty <- newTyVarTy
+          body_ty <- inferRho(body).extendVarEnv(id, var_ty)
+          rho <- writeTcRef(ref, var_ty --> body_ty).map(t.typed)
+        } yield {
+          println("Lam: v is %s, body is %s, rho is %s" format(id, body, rho))
+          println("tcRho: Lab, Infer(ref) is " + rho)
+          rho
+        }
+      }
       case (ALam(v, var_ty, body, id), Check(exp_ty)) => for {
         (arg_ty, body_ty) <- unifyFun(exp_ty)
         _ <- subsCheck(arg_ty, var_ty)
@@ -67,15 +75,16 @@ trait TypeCheckFunctions {
         rho <- writeTcRef(ref, var_ty --> body_ty)
 //        res <- t.typed(rho)
       } yield t.typed(rho)
-      case (Let(v, rhs), Infer(ref)) => for {
-        var_ty <- newTyVarTy
-        body_ty <- inferRho(rhs).extendVarEnv(v, var_ty)
-        rho <- writeTcRef(ref, body_ty)
-//        exp <- t.typed(rho)
-      } yield t.typed(rho)
+//      case (Let(v, rhs), Infer(ref)) => for {
+//        var_ty <- newTyVarTy
+//        body_ty <- inferRho(rhs).extendVarEnv(v, var_ty)
+//        rho <- writeTcRef(ref, body_ty)
+////        exp <- t.typed(rho)
+//      } yield t.typed(rho)
       case (Let(v, rhs), exp_ty) => for {
         var_ty <- newTyVarTy
         rho <- tcRho(rhs, exp_ty).extendVarEnv(v, var_ty)
+//        sig <- instSigma(t, )
       } yield rho
       case (Ann(body, ann_ty, id), exp_ty) => for {
         _ <- checkSigma(body, ann_ty)
@@ -85,11 +94,15 @@ trait TypeCheckFunctions {
   }
 
   def inferRho(expr: Term): Tc[Rho] = {
+    println("inferRho " + expr)
     for {
       ref <- newTcRef[Rho](null.asInstanceOf[Rho])
       _ <- tcRho(expr, Infer(ref))
       res <- readTcRef(ref)
-    } yield res
+    } yield {
+      println("inferRho: result is " + res)
+      res
+    }
   }
 
   /**Subsumption check for Rho types. Invariant: the second argument is in weak-prenex form.*/
@@ -141,7 +154,10 @@ trait TypeCheckFunctions {
       env_tvs <- getMetaTyVars(env_tys)
       res_tvs <- getMetaTyVars(Vector(exp_ty))
       res <- quantify(res_tvs.diff(env_tvs), exp_ty).map(e.typed)
-    } yield res
+    } yield {
+      println("quantify: res_tv diff(env_tvs) " + res_tvs.diff(env_tvs))
+      res
+    }
 
 
   def checkSigma(expr: Term, sigma: Sigma): Tc[Unit] = {
@@ -158,19 +174,6 @@ trait TypeCheckFunctions {
     }
   }
 
-  def instSigma2(t: Term, t1: Sigma, er: Expected[Rho]): Tc[Rho] = {
-    val rho = er match {
-      case Check(t2) => subsCheckRho(t1, t2)
-      case Infer(r) => {
-        for {
-          t11 <- instantiate(t1)
-          r <- writeTcRef(r, t11)
-        } yield r
-      }
-    }
-    rho
-  }
-
   def instSigma(t: Term, t1: Sigma, er: Expected[Rho]): Tc[Term] = {
     val rho = er match {
       case Check(t2) => subsCheckRho(t1, t2)
@@ -185,4 +188,4 @@ trait TypeCheckFunctions {
   }
 }
 
-object TypeCheck extends TypeCheckFunctions
+object TypeCheck extends TypeCheck

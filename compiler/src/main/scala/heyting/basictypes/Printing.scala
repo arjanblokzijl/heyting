@@ -18,15 +18,15 @@ object Printing {
       case Var(n) => pprName(n)
       case Lit(l,ty) => pprLit(l)
       case App(l, r, id) => pprApp(App(l, r, id))
-      case Lam(v, e, ty) => sep(IndexedSeq(char('\\') <> pprName(v) <> text("."), termOutput.ppr(e)))
+      case Lam(id, e) => sep(IndexedSeq(char('\\') <> pprName(id) <> text("."), termOutput.ppr(e)))
       case ALam(v, t, e,_) => sep(IndexedSeq(char('\\') <> parens(pprName(v) <> dcolon <> typeOutput.ppr(t))))
       case Let(v, e) => sep(IndexedSeq(text("let {"), nest(2, pprName(v) <+> char(eqls) <+> termOutput.ppr(e) <+> char('}'))))
       case Ann(e, ty,_) => pprParentTerm(e) <+> dcolon <+> pprParendType(ty)
     }
   }
 
+  implicit def ppr(t: Term): Doc = termOutput.ppr(t)
   def docToString(doc: Doc): String = render(doc)
-
 
   def pprName(i: Ident): Doc = text(i.name)
 
@@ -47,8 +47,8 @@ object Printing {
   }
 
   def pprParentTerm(e: Term): Doc =
-     if (e.atomicTerm) termOutput.ppr(e)
-     else parens(termOutput.ppr(e))
+     if (e.atomicTerm) ppr(e)
+     else parens(ppr(e))
 
   implicit val typeOutput: Output[Type] = new Output[Type] {
     def ppr(a: Type) = ppr_type(a)
@@ -59,12 +59,15 @@ object Printing {
     else ppr_type(ty)
   }
 
-  def ppr_type(ty: Type): Doc = ty match {
-    case ForAll(ns, ty) => sep(Vector(text("forall") <+> hsep(ns.map(typeOutput.ppr)) <> dot, typeOutput.ppr(ty)))
-    case Fun(arg, res) => sep(Vector(pprType(arrPrec, arg) <+> text("->"), pprType(arrPrec-1, res)))
-    case tc: TyCon => ppr_tc(tc)
-    case tv: TyVar => ppr_tv(tv)
-    case MetaTv(u, tv) => ppr_tr(tv)
+  def ppr_type(ty: Type): Doc = {
+    println("printing type " + ty)
+    ty match {
+      case ForAll(ns, ty) => sep(Vector(text("forall") <+> hsep(ns.map(typeOutput.ppr)) <> dot, typeOutput.ppr(ty)))
+      case Fun(arg, res) => sep(Vector(pprType(arrPrec, arg) <+> text("->"), pprType(arrPrec-1, res)))
+      case tc: TyCon => ppr_tc(tc)
+      case tv: TyVar => ppr_tv(tv)
+      case MetaTv(u, tv) => ppr_tr(tv)
+    }
   }
 
   def precType(ty: Type): Precedence = ty match {
@@ -81,8 +84,8 @@ object Printing {
   }
 
   def ppr_tv(tv: TyVar): Doc = tv match {
-    case BoundTv(n) => text("boundTv: " + n)
-    case SkolemTv(n, _) => text("skolemTv: " + n)
+    case BoundTv(n) => text(n)
+    case SkolemTv(n, _) => text(n)
   }
 
   def ppr_tc(tc: TyCon): Doc = tc match {

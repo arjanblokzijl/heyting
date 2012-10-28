@@ -32,7 +32,7 @@ sealed trait Term extends Tree {
       case Var(id) => Var(tpe(id))
       case Lit(l, id) => Lit(l, tpe(id))
       case App(l, r, id) => App(l, r, tpe(id))
-      case Lam(n, t, id) => Lam(n, t, tpe(id))
+      case Lam(id, t) => Lam(tpe(id), t)
       case ALam(n, s, t, id) => ALam(n, s, t, tpe(id))
       case Let(id, e) => Let(tpe(id), e)
       case Ann(t, s, id) => Ann(t, s, id)
@@ -43,7 +43,7 @@ sealed trait Term extends Tree {
 case class Var(id: Ident) extends Term
 case class Lit(l: Literal, id: Ident) extends Term
 case class App(l: Term, r: Term, id: Ident) extends Term
-case class Lam(n: Ident, t: Term, id: Ident) extends Term
+case class Lam(id: Ident, t: Term) extends Term
 case class ALam(n: Ident, s: Sigma, t: Term, id: Ident) extends Term
 case class Let(id: Ident, expr: Term) extends Term
 case class Ann(t: Term, s: Sigma, id: Ident) extends Term

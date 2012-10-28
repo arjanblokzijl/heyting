@@ -177,7 +177,7 @@ object TypeSystem {
 	// As a side effect, collapses the list of type instances.
 	def prune(t: Type): Type = t match {
 		case v: Variable if v.instance.isDefined => {
-			var inst = prune(v.instance.get)
+			val inst = prune(v.instance.get)
 			v.instance = Some(inst)
 			inst
 		}

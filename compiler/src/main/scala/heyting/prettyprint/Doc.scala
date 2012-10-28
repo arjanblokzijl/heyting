@@ -262,7 +262,7 @@ object Docs {
     case NoDoc => false
     case NilAbove(_) => true
     case TextBeside(_, sl, p) => fits(n - sl, p)
-    case n: Nest => sys.error("fits Nest")
+    case n: Nest => true //sys.error("fits Nest")
     case u: Union => sys.error("fits Union")
     case a: Above => sys.error("fits Above")
     case b: Beside => sys.error("fits Beside")
@@ -299,7 +299,7 @@ object Docs {
   def fullRender[A](m: Mode, lineLen: Int, ribbons: Float, txt: (TextDetails, A) => A, end: A, doc: Doc): A = m match {
     case OneLineMode => easy_display(space_text, (x, y) => y, txt, end, doc.reduceDoc)
     case LeftMode => easy_display(nl_text, first, txt, end, doc.reduceDoc)
-    case m => {
+    case _ => {
       val bestLineLen = m match {
         case ZigZagMode => Int.MaxValue
         case _ => lineLen

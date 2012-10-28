@@ -7,7 +7,7 @@ import basictypes._
 import Types._
 import heyting.prettyprint.Docs._
 import Printing._
-
+import Ident._
 /**
  * User: arjan
  */
@@ -19,8 +19,19 @@ object TcExample extends scala.App {
         (RawName("false"), BooleanT))
 
 
-  val expr = Let(RawName("a"),Lit(IntLit(1), RawName("1")))
+  val letExpr = Let(RawName("a"),Lit(IntLit(1), RawName("1")))
+  val lexpr = Lam(raw("a"),
+                    Lam(raw("b"), Var(raw("b")))
+                 )
+  val lexpr2 = Lam(raw("a"),Var(raw("a")))
+  val expr2 = App(
+                Var(RawName("add")), App(Var(RawName("a")), Var(RawName("b")), RawName("a b")), RawName("add"))
+
+  val letExpr2 = Let(RawName("fun"), lexpr)
+  val expr = letExpr2
   val result = Tc.runTc(emptyTypeEnv, TypeCheck.tcExpr(expr))
+
+
   val texpr = result match {
     case Left(err) => Printing.docToString(err)
     case Right(ex) => {
@@ -31,5 +42,5 @@ object TcExample extends scala.App {
     }
   }
 
-  println("typeCheck expressing " + texpr)
+  println("typeCheck: " + texpr)
 }

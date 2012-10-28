@@ -15,7 +15,9 @@ object Lexer {
     "module" -> MODULE,
     "data" -> DATA,
     "where" -> WHERE,
-    "in" -> IN
+    "in" -> IN,
+    "->" -> LARROW,
+    "=" -> ASSIGNMENT
   )
 
   private[parser] final val kwHashTokenMap: Map[Int, Int] =
@@ -235,5 +237,16 @@ class Lexer(source: SourceFile) {
     }
     lb.toList
   }
-
 }
+
+
+
+//        case "=" => mkToken(ASSIGNMENT, chars)
+//        case "!=" => mkToken(NE, chars)
+//        case "<" => mkToken(LT, chars)
+//        case ">" => mkToken(GT, chars)
+//        case "<-" => mkToken(LARROW, chars)
+//        case "->" => mkToken(RARROW, chars)
+//        case "true" => mkToken(TRUE, chars)
+//        case "false" => mkToken(FALSE, chars)
+

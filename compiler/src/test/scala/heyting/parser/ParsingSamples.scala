@@ -1,7 +1,7 @@
 package heyting
 package parser
 
-import compilation.CompilationUnit
+import compilation.{VerboseOptions, StdOptions, CompilationUnit}
 import reports.ConsoleReport
 
 
@@ -9,17 +9,14 @@ import reports.ConsoleReport
  * User: arjan
  */
 object ParsingSamples extends App {
-  val s = VirtualSourceFile("let a = 1")
+  val s = VirtualSourceFile("let add a b = + a b")
   val l = new Lexer(s)
-//  println("tokens " + l.tokenize)
 
-  val parser = new Parser {
-    def in = l
-    def source = s
-    def unit = new CompilationUnit(s, ConsoleReport)
+  val pp = new Parsing {
+    def unit = new CompilationUnit(s, ConsoleReport, VerboseOptions)
   }
 
-  val tree = parser.parse
-  println("tree is " + tree)
+  val res = pp.parseString
+  println("pp.parse is " + res)
 
 }
