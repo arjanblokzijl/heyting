@@ -11,9 +11,9 @@ import ast._
  */
 trait TermGrammar extends JavaTokenParsers with PackratParsers {
 
-  lazy val keyword: Parser[String] = "let"
+  lazy val keyword: Parser[String] = "let" | "in" | "forall" | "if" | "then" | "else"
 
-  lazy val liter: Parser[Ident] = log(not(keyword) ~> ident ^^ name)("literal")
+  lazy val liter: Parser[Ident] = not(keyword) ~> ident ^^ name
 
   lazy val argList: Parser[List[Var]] = rep(not(keyword) ~> ident ^^ varTerm)
 
@@ -25,27 +25,27 @@ trait TermGrammar extends JavaTokenParsers with PackratParsers {
 
   lazy val double: Parser[Literal] = decimalNumber ^^ doubleLit
 
-  lazy val symbol: Parser[Term] = """\++""".r ^^ (s => Var(RawName(s.toString)))
+  lazy val symbol: Parser[Term] = """[\+\-\*]+""".r ^^ (s => Var(RawName(s.toString)))
 
   lazy val namelist: PackratParser[List[Ident]] = log(rep(liter))("names")
 
   lazy val args: PackratParser[List[Var]] = log("(" ~> opt(argList) <~ ")" ^^ optArgs)("args") |
     failure("Illegal arguments syntax")
 
-  lazy val let: Parser[Term] = "let" ~> (liter ~ namelist <~ "=") ~ expr ^^ letExpr
+  lazy val let: Parser[Term] = "let" ~> (liter ~ namelist <~ "=") ~ readTerm ^^ letExpr
 
-  lazy val atom = lit | variable | symbol
+  lazy val atom = lit | variable | symbol | parens(readTerm)
 
-  lazy val expr = let | app
+  def readTerm = log(let | app)("readTerm")
 
-  lazy val app: Parser[Term] = {
-    val li = atom
-    rep1(li).map{case fun::args =>
-      args.foldLeft(fun)((f, a) =>
-        App(f, a, RawName(f.id.name + a.id.name))
-      )
+  def parens(p: Parser[Term]): Parser[Term] = "(" ~> p <~ ")"
+
+  def app: Parser[Term] =
+    rep1(atom).map{case fun::args =>
+      args.foldLeft(fun)((f, a) => App(f, a, RawName(f.id.name + a.id.name)))
+      case Nil => sys.error("app: empty list") //impossible
     }
-  }
+
 
   def name: String => RawName = RawName(_)
 
