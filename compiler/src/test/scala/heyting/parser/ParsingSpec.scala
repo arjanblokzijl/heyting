@@ -25,7 +25,7 @@ class ParsingSpec extends Specification {
     }
     "lam" in {
       val res = parse("\\a b -> a + b").get
-      res must be_==(Lam(Raw("b"),Lam(Raw("a"),App(App(Var(Raw("a")),Var(Raw("+")),Raw("a+")),Var(Raw("b")),Raw("a+b")))))
+      res must be_==(Lam(Raw("a"),Lam(Raw("b"),App(App(Var(Raw("a")),Var(Raw("+")),Raw("a+")),Var(Raw("b")),Raw("a+b")))))
     }
   }
 }

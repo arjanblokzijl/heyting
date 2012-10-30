@@ -48,12 +48,6 @@ trait TermGrammar extends JavaTokenParsers with PackratParsers {
 
   lazy val ord_lam: Parser[Term] = (rep(identifier) <~ reservedOp("->")) ~ readTerm ^^ nestedLam
 
-//  ord_lam :: Parser Term
-//  ord_lam = do { v <- identifier ;
-//  	       dot ;
-//  	       body <- readTerm ;
-//  	       return (Lam v body) }
-
   lazy val name: String => Raw = Raw(_)
 
   lazy val optArgs: Option[List[Var]] => List[Var] = a => a match {
@@ -66,7 +60,7 @@ trait TermGrammar extends JavaTokenParsers with PackratParsers {
     case x::xs => Let(id, xs.foldLeft(Lam(x, t))((l, i) => Lam(i, l)))
   }}
 
-  lazy val nestedLam: List[Ident] ~ Term => Lam = {case vars ~ t => vars match {
+  lazy val nestedLam: List[Ident] ~ Term => Lam = {case vars ~ t => vars.reverse match {
     case Nil => sys.error("nestedLam: empty list")
     case x::xs => xs.foldLeft(Lam(x, t))((l, i) => Lam(i, l))
   }}
