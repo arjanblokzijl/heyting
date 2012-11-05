@@ -5,70 +5,154 @@ import util.parsing.combinator._
 import scala.util.parsing.combinator.syntactical._
 import basictypes._
 import ast._
+import heyting.basictypes.Types._
 
 /**
  * User: arjan
  */
 trait TermGrammar extends JavaTokenParsers with PackratParsers {
 
-  lazy val keyword: Parser[String] = "let" | "in" | "forall" | "if" | "then" | "else"
-  lazy val reservedOps: Set[String] = Set("\\", "->")
+  def keyword: Parser[String] = "let" | "in" | "forall" | "if" | "then" | "else"
 
-  lazy val identifier: Parser[Ident] = not(keyword) ~> ident ^^ name
+  def keywords: Set[String] = Set("let", "in", "forall", "if", "then", "else")
 
-  lazy val int: Parser[IntLit] = wholeNumber ^^ (s => IntLit(s.toInt))
+  def reservedOps: Set[String] = Set("\\", "->", "::")
 
-  lazy val double: Parser[Literal] = decimalNumber ^^ (s => DoubleLit(s.toDouble))
+  def identifier: Parser[Ident] = not(keyword) ~> ident ^^ Raw
 
-  lazy val lit: Parser[Term] = (int | double) ^^ literalLit
+  def int: Parser[IntLit] = wholeNumber ^^ (s => IntLit(s.toInt))
 
-  lazy val variable: Parser[Term] =  not(keyword) ~> ident ^^ (s => Var(Raw(s)))
+  def double: Parser[Literal] = decimalNumber ^^ (s => DoubleLit(s.toDouble))
 
-  lazy val symbol: Parser[Term] = """[\+\-\*]+""".r ^^ (s => Var(Raw(s.toString)))
+  def lit: Parser[Term] = (int | double) ^^ literalLit
 
-  lazy val args: PackratParser[List[Ident]] = log(rep(not(keyword) ~> identifier))("args")
+  def variable: Parser[Term] =  not(keyword) ~> ident ^^ (s => Var(Raw(s)))
 
-  lazy val atom = lit | variable | symbol | parens(readTerm)
+  def symbol: Parser[Term] = """[\+\-\*]+""".r ^^ (s => Var(Raw(s.toString)))
 
-  lazy val readTerm = log(let | app | lam)("readTerm")
+  def args: PackratParser[List[Ident]] = log(rep(not(keyword) ~> identifier))("args")
 
-  def parens(p: Parser[Term]): Parser[Term] = "(" ~> p <~ ")"
+  def atom = lit | variable | symbol | parens(readTerm)
+
+  def arrow: Parser[String] = reservedOp("->")
+
+  def readTerm: PackratParser[Term] = log(ann | non_ann)("readTerm")
+
+  def non_ann = let | app | lam
+
+  def ann = for {
+    term <- non_ann
+    _ <- reservedOp("::")
+    ty <- readSigma
+  } yield Ann(term, ty, term.id)
+
+  def parens[T](p: => Parser[T]): Parser[T] = "(" ~> p <~ ")"
 
   def reservedOp(op: String): Parser[String] = if (reservedOps.contains(op)) op else failure("not a valid operator: " + op)
 
-  lazy val let: Parser[Term] = "let" ~> (identifier ~ args <~ "=") ~ readTerm ^^ letExpr
+  def reserved(kw: String): Parser[String] = if (keywords.contains(kw)) kw else failure("not a valid keyword: " + kw)
 
-  lazy val app: Parser[Term] =
+  def let: Parser[Term] = "let" ~> (identifier ~ args <~ "=") ~ readTerm ^^ letExpr
+
+  def app: Parser[Term] =
     rep1(atom).map{case fun::args =>
       args.foldLeft(fun)((f, a) => App(f, a, Raw(f.id.name + a.id.name)))
       case Nil => sys.error("app: empty list") //impossible
     }
 
-  lazy val lam: Parser[Term] = reservedOp("\\") ~> ord_lam
+  def lam: Parser[Term] = reservedOp("\\") ~> (ann_lam | ord_lam)
 
-  lazy val ord_lam: Parser[Term] = (rep(identifier) <~ reservedOp("->")) ~ readTerm ^^ nestedLam
+  def ord_lam: Parser[Term] = (rep(identifier) <~ reservedOp("->")) ~ readTerm ^^ nestedLam
 
-  lazy val name: String => Raw = Raw(_)
+  def ann_lam: Parser[Term] = log(
+    for {
+      (vs, ex, ty) <- for {
+        vs <- rep(identifier) <~ reservedOp("->")
+        ex <- readTerm
+        _ <- reservedOp("::")
+        ty <- readSigma
+      } yield (vs, ex, ty)
+      _ <- dot
+      body <- readTerm
+    } yield nestedALam(vs, body, ty)
+  )("ann_lam")
 
-  lazy val optArgs: Option[List[Var]] => List[Var] = a => a match {
+  private def nestedALam(vars: List[Ident], body: Term, ty: Sigma): ALam = vars.reverse match {
+    case Nil => sys.error("nestedLam: empty list")
+    case x::xs => xs.foldLeft(ALam(x, ty, body, body.id))((l, i) => ALam(i, ty, l, l.id))
+  }
+
+  def name: String => Raw = Raw(_)
+
+  def optArgs: Option[List[Var]] => List[Var] = a => a match {
     case None => List[Var]()
     case Some(vars) => vars
   }
 
-  lazy val letExpr: Ident ~ List[Ident] ~ Term => Let = {case id ~ vars ~ t => vars match {
+  def letExpr: Ident ~ List[Ident] ~ Term => Let = {case id ~ vars ~ t => vars match {
     case Nil => Let(id, t)
     case x::xs => Let(id, xs.foldLeft(Lam(x, t))((l, i) => Lam(i, l)))
   }}
 
-  lazy val nestedLam: List[Ident] ~ Term => Lam = {case vars ~ t => vars.reverse match {
+  def nestedLam: List[Ident] ~ Term => Lam = {case vars ~ t => vars.reverse match {
     case Nil => sys.error("nestedLam: empty list")
     case x::xs => xs.foldLeft(Lam(x, t))((l, i) => Lam(i, l))
   }}
 
-  lazy val literalLit: Literal => Lit = l => l match {
+
+  def literalLit: Literal => Lit = l => l match {
     case IntLit(v) => Lit(l, Raw(v.toString))
     case DoubleLit(v) => Lit(l, Raw(v.toString))
     case CharLit(c) => Lit(l, Raw(c.toString))
     case StringLit(s) => Lit(l, Raw(s))
   }
+
+  def dot: Parser[Char] = '.'
+
+  def rfun: Parser[Rho] = for {
+    arg <- atomSigma
+    _ <- reservedOp("->")
+    res <- readRho
+  } yield Fun(arg, res)
+
+  def readRho: Parser[Rho] = rfun | atomRho
+
+  def atomRho: Parser[Rho] = tvar | tcon | parens(readRho)
+
+  def readSigma: Parser[Sigma] = parens(readSigma) | sigma | readRho
+
+  def atomSigma: Parser[Sigma] = parens(sigma) | atomRho
+
+  def sigma: Parser[Sigma] = for {
+    _ <- reserved("forall")
+    tvs <- readTvs
+    _ <- dot
+    rho <- readRho
+  } yield ForAll(tvs.map(id => BoundTv(id.name)), rho)
+
+  def readTvs: Parser[List[Ident]] = rep(identifier)
+
+  def readTau: Parser[Tau] = tfun | atomTau
+
+  def tfun: Parser[Tau] = identifier.map(i => BoundTv(i.name))
+
+  def fail[T](msg: String): Parser[T] =  Parser[T]{ in => Failure(msg, in) }
+
+  def tvar: Parser[Tau] = identifier.flatMap(i => {
+     val res = if (isBasicType(i)) failure("") else Parser(in => Success((), in))
+     res.map(_ => BoundTv(i.name))
+    })
+
+  def isBasicType(i: Ident): Boolean =
+    i.name == "Int" || i.name == "Double" || i.name == "Bool" || i.name == "String"  || i.name == "Char"
+
+  def tcon: Parser[Tau] = identifier.map(i => i.name match {
+    case "Int" => IntT
+    case "Double" => DoubleT
+    case "String" => StringT
+    case "Char" => CharT
+    case o => sys.error("tcon: not a basic type " + o)
+  })
+
+  def atomTau: Parser[Tau] = tvar | tcon | parens(readTau)
 }
