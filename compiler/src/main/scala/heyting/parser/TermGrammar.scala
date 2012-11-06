@@ -11,6 +11,8 @@ import heyting.basictypes.Types._
  * User: arjan
  */
 trait TermGrammar extends JavaTokenParsers with PackratParsers {
+//  override val whiteSpace = """[ \t]+""".r
+  def eol = """(\r?\n)+""".r
 
   def keyword: Parser[String] = "let" | "in" | "forall" | "if" | "then" | "else"
 
@@ -32,13 +34,15 @@ trait TermGrammar extends JavaTokenParsers with PackratParsers {
 
   def args: PackratParser[List[Ident]] = log(rep(not(keyword) ~> identifier))("args")
 
-  def atom = lit | variable | symbol | parens(readTerm)
+  def atom = lit | variable | symbol | parens(term)
 
   def arrow: Parser[String] = reservedOp("->")
 
-  def readTerm: PackratParser[Term] = log(ann | non_ann)("readTerm")
+  def terms: PackratParser[List[Term]] = log(rep(term  <~ opt(eol)))("terms")
 
-  def non_ann = let | app | lam
+  def term: PackratParser[Term] = log((ann | non_ann))("term")
+
+  def non_ann = (let | app | lam)
 
   def ann = for {
     term <- non_ann
@@ -52,7 +56,7 @@ trait TermGrammar extends JavaTokenParsers with PackratParsers {
 
   def reserved(kw: String): Parser[String] = if (keywords.contains(kw)) kw else failure("not a valid keyword: " + kw)
 
-  def let: Parser[Term] = "let" ~> (identifier ~ args <~ "=") ~ readTerm ^^ letExpr
+  def let: Parser[Term] = log("let" ~> (identifier ~ args <~ "=") ~ term ^^ letExpr)("let")
 
   def app: Parser[Term] =
     rep1(atom).map{case fun::args =>
@@ -62,18 +66,18 @@ trait TermGrammar extends JavaTokenParsers with PackratParsers {
 
   def lam: Parser[Term] = reservedOp("\\") ~> (ann_lam | ord_lam)
 
-  def ord_lam: Parser[Term] = (rep(identifier) <~ reservedOp("->")) ~ readTerm ^^ nestedLam
+  def ord_lam: Parser[Term] = (rep(identifier) <~ reservedOp("->")) ~ term ^^ nestedLam
 
   def ann_lam: Parser[Term] = log(
     for {
       (vs, ex, ty) <- for {
         vs <- rep(identifier) <~ reservedOp("->")
-        ex <- readTerm
+        ex <- term
         _ <- reservedOp("::")
         ty <- readSigma
       } yield (vs, ex, ty)
       _ <- dot
-      body <- readTerm
+      body <- term
     } yield nestedALam(vs, body, ty)
   )("ann_lam")
 

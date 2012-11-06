@@ -1,23 +1,26 @@
 package heyting
 package basictypes
 
-import parser.{Token, SourceFile}
+import parser.SourceFile
 
 /**
  * User: arjan
  */
 trait Position {
-  def first: Token
-  def last: Token
   def fileName: String
+  def firstCol: Int
+  def lastCol: Int
+  def firstLine: Int
+  def lastLine: Int
 
-  override def toString = "line: " + first.line + " offset: " + first.offset
+  def position: String = "Position: file %s, start %s, end %s" format (fileName, firstCol, lastCol)
 }
 
-case class SrcSpan(source: SourceFile, first: Token, last: Token) extends Position {
-  def fileName = source.name
-
-  def startLine: Int = first.line
-
-  def endLine: Int = last.line
+case class Positioned[T](fileName: String, offset: Offset, input: T) extends Position {
+  def firstCol = offset.startOffset + 1
+  def lastCol = offset.endOffset + 1
+  def firstLine = offset.startLine
+  def lastLine = offset.endLine
 }
+
+case class Offset(startLine: Int, endLine: Int, startOffset: Int, endOffset: Int)
