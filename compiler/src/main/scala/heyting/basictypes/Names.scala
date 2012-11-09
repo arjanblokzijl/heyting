@@ -1,7 +1,6 @@
 package heyting
 package basictypes
 
-import compilation.Compilation._
 import heyting.basictypes.Types._
 /**
  * User: arjan
@@ -21,7 +20,7 @@ case class Raw(name: String) extends Ident {
   def uniq(u: Unique): UniqName = UniqName(name, u)
 }
 
-/**A name which is made unique with respect to its enviroment.*/
+/**A name which is made unique with respect to its environment.*/
 case class UniqName(name: String, uniq: Unique) extends Ident
 case class Id(name: String, tpe: Type) extends Ident {
   def uniq(u: Unique): UId = UId(name, u, tpe)

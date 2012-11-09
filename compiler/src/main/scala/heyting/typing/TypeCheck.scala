@@ -37,7 +37,6 @@ trait TypeCheck {
    * then rho is in weak-prenex form
    */
   final def tcRho(t: Term, e: Expected[Rho]): Tc[Term] = {
-    println("tcRho: %s %s" format(t, e))
     (t, e) match {
       case (Lit(l, id), exp_ty) => instSigma(t, litType(l), exp_ty)
       case (Var(v), exp_ty) => for {
@@ -59,11 +58,7 @@ trait TypeCheck {
           var_ty <- newTyVarTy
           body_ty <- inferRho(body).extendVarEnv(id, var_ty)
           rho <- writeTcRef(ref, var_ty --> body_ty).map(t.typed)
-        } yield {
-          println("Lam: v is %s, body is %s, rho is %s" format(id, body, rho))
-          println("tcRho: Lab, Infer(ref) is " + rho)
-          rho
-        }
+        } yield rho
       }
       case (ALam(v, var_ty, body, id), Check(exp_ty)) => for {
         (arg_ty, body_ty) <- unifyFun(exp_ty)
@@ -94,15 +89,11 @@ trait TypeCheck {
   }
 
   def inferRho(expr: Term): Tc[Rho] = {
-    println("inferRho " + expr)
     for {
       ref <- newTcRef[Rho](null.asInstanceOf[Rho])
       _ <- tcRho(expr, Infer(ref))
       res <- readTcRef(ref)
-    } yield {
-      println("inferRho: result is " + res)
-      res
-    }
+    } yield res
   }
 
   /**Subsumption check for Rho types. Invariant: the second argument is in weak-prenex form.*/
@@ -154,10 +145,7 @@ trait TypeCheck {
       env_tvs <- getMetaTyVars(env_tys)
       res_tvs <- getMetaTyVars(Vector(exp_ty))
       res <- quantify(res_tvs.diff(env_tvs), exp_ty).map(e.typed)
-    } yield {
-      println("quantify: res_tv diff(env_tvs) " + res_tvs.diff(env_tvs))
-      res
-    }
+    } yield res
 
 
   def checkSigma(expr: Term, sigma: Sigma): Tc[Unit] = {

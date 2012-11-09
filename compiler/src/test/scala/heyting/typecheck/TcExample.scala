@@ -29,7 +29,7 @@ object TcExample extends scala.App {
 
   val letExpr2 = Let(Raw("fun"), lexpr)
   val expr = letExpr2
-  val result = Tc.runTc(emptyTypeEnv, TypeCheck.tcExpr(expr))
+  val result: Either[Tc.ErrMsg, Term] = Tc.runTc(emptyTypeEnv, TypeCheck.tcExpr(expr))
 
 
   val texpr = result match {

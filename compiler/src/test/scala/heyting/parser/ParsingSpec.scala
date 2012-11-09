@@ -2,37 +2,26 @@ package heyting
 package parser
 
 import org.specs2.mutable.Specification
-import compilation.{VerboseOptions, CompilationUnit}
+import compilation.{Verbose, CompilationUnit}
 import reports.ConsoleReport
 import ast._
 import basictypes._
 import basictypes.Types.BoundTv
+import base.CompileUtils
 
 /**
  * User: arjan
  */
-class ParsingSpec extends Specification {
-  def parse(expr: String) = new Parsing {
-    def unit = new CompilationUnit(VirtualSourceFile(expr), ConsoleReport, VerboseOptions)
-  }.parse
-
-  def pos(expr: String) = new Parsing {
-    def unit = new CompilationUnit(VirtualSourceFile(expr), ConsoleReport, VerboseOptions)
-  }.pparse
-
-  def parseAll(expr: String) = new Parsing {
-    def unit = new CompilationUnit(VirtualSourceFile(expr), ConsoleReport, VerboseOptions)
-  }.readTerms
-
+class ParsingSpec extends CompileUtils {
+//  settings = Verbose
   "parsing" should {
     "let statement" in {
       val res: Term = parse("let a = 1").get
       res must be_==(Let(Raw("a"), Lit(IntLit(1), Raw("1"))))
     }
-    "statement with position" in {
+    "positioned statement" in {
       val res = pos("let a = 1").get
-      println("result is " + res)
-      res must be_==(Positioned("<Virtual File>", Offset(1,1,0,9), Let(Raw("a"), Lit(IntLit(1), Raw("1")))))
+      res must be_==(Pos("<Virtual File>", Offset(1,1,0,9), Let(Raw("a"), Lit(IntLit(1), Raw("1")))))
     }
     "let statements newline" in {
       val res = parseAll("let a = 1\nlet b = 2").get

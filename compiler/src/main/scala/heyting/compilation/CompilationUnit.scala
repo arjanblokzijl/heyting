@@ -8,12 +8,12 @@ import basictypes.Position
 trait Compilation {
   def source: SourceFile
   def report: Reporting
-  def options: Options
+  def settings: Settings
 }
 
-class CompilationUnit(val source: SourceFile, val report: Reporting, val options: Options) extends Compilation {
+class CompilationUnit(val source: SourceFile, val report: Reporting, val settings: Settings) extends Compilation {
   def trace(msg: String) =
-    if (options.hasFlag(TRACE)) report.trace(msg)
+    if (settings.trace) report.trace(msg)
 
   def error(pos: Position, msg: String, b: Boolean) =
     report.error(pos, msg)
@@ -22,5 +22,3 @@ class CompilationUnit(val source: SourceFile, val report: Reporting, val options
     report.incompleteInputError(pos, msg)
 
 }
-
-object Compilation

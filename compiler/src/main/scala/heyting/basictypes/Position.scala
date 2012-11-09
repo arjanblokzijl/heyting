@@ -16,7 +16,7 @@ trait Position {
   def position: String = "Position: file %s, start %s, end %s" format (fileName, firstCol, lastCol)
 }
 
-case class Positioned[T](fileName: String, offset: Offset, input: T) extends Position {
+case class Pos[T](fileName: String, offset: Offset, input: T) extends Position {
   def firstCol = offset.startOffset + 1
   def lastCol = offset.endOffset + 1
   def firstLine = offset.startLine

@@ -26,7 +26,7 @@ sealed trait Term extends Tree {
     case Lit(_,_) => true
     case _ => false
   }
-  def typed(typ: Type) = {
+  def typed(typ: Type): Term = {
     def tpe(id: Ident): Ident = id.typed(typ)
     this match {
       case Var(id) => Var(tpe(id))

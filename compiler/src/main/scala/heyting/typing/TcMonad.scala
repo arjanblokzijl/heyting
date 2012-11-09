@@ -75,10 +75,8 @@ trait TcFunctions {
   }
 
   def newUnique: Tc[Unique] = tc[Unique](env => {
-    println("newUnique: old value is " + env.uniqs.read)
     val newU = env.incrUnique
     val incr = newU.read
-    println("newUnique: new value is " + incr)
     Right(incr)
   })
 
@@ -112,17 +110,13 @@ trait TcFunctions {
 
   def getEnvTypes: Tc[Seq[Type]] = for {
     env <- getEnv
-  } yield {
-    println("getEnvTypes: " + env)
-    env.values.toIndexedSeq
-  }
+  } yield env.values.toIndexedSeq
 
   def extendVarEnv[A](v: Ident, ty: Sigma, m: Tc[A]): Tc[A] =
     m.extendVarEnv(v, ty)
 
   def lookupVar(n: Ident): Tc[Sigma] = {
     getEnv.flatMap{env => {
-      println("lookupVar: var %s, env: %s" format (n, env))
       env.get(n) match {
         case Some(s) => point(s)
         case None => failTc[Sigma](text("Not in scope: ") <+> quotes(Printing.pprName(n)))
@@ -142,7 +136,6 @@ trait TcFunctions {
 //  --      Quantification                  --
 //  ------------------------------------------
   def quantify(tvs: Seq[MetaTv], ty: Rho): Tc[Sigma] = {
-    println("quantify: meta tvs %s rho is %s" format(tvs, ty))
     val used_bndrs = tyVarBndrs(ty)
     val new_bndrs: Seq[TyVar] = allBinders.diff(used_bndrs).take(tvs.length)
     def bind(tv: MetaTv, name: String): Tc[Sigma] = writeTv(tv, BoundTv(name))
@@ -193,19 +186,14 @@ trait TcFunctions {
   def getMetaTyVars(tys: Seq[Type]): Tc[Seq[MetaTv]] =
     for {
       tys1 <- tcMonad.mapM(tys)(zonkType)
-    } yield {
-      println("getMetaTyVars: " + tys1)
-      val res = metaTvs(tys1)
-      println("getMetaTyVars res: " + tys1)
-      res
-    }
+    } yield metaTvs(tys1)
+
 
   /**
    * The instantiation of type variables, aka as Zonking in GHC.
    * Eliminates any substitutions in the type
   */
   def zonkType(t: Type): Tc[Type] = {
-    println("zonkType: " + t)
     t match {
       case ForAll(ns, ty) => zonkType(ty).map(ty1 => ForAll(ns, ty1))
       case Fun(arg, res) => for {
